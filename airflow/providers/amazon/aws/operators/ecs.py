@@ -105,6 +105,9 @@ class ECSOperator(BaseOperator):  # pylint: disable=too-many-instance-attributes
         Only required if you want logs to be shown in the Airflow UI after your job has
         finished.
     :type awslogs_stream_prefix: str
+    :param capacity_provider_strategy: an array of weighted capacity provider
+        configurations used to select the compute resource running your task.
+    :type capacity_provider_strategy: list
     """
 
     ui_color = '#f0ede4'
@@ -117,7 +120,8 @@ class ECSOperator(BaseOperator):  # pylint: disable=too-many-instance-attributes
                  aws_conn_id=None, region_name=None, launch_type='EC2',
                  group=None, placement_constraints=None, platform_version='LATEST',
                  network_configuration=None, tags=None, awslogs_group=None,
-                 awslogs_region=None, awslogs_stream_prefix=None, propagate_tags=None, **kwargs):
+                 awslogs_region=None, awslogs_stream_prefix=None, propagate_tags=None,
+                 capacity_provider_strategy=None, **kwargs):
         super().__init__(**kwargs)
 
         self.aws_conn_id = aws_conn_id
@@ -130,6 +134,7 @@ class ECSOperator(BaseOperator):  # pylint: disable=too-many-instance-attributes
         self.placement_constraints = placement_constraints
         self.platform_version = platform_version
         self.network_configuration = network_configuration
+        self.capacity_provider_strategy = capacity_provider_strategy
 
         self.tags = tags
         self.awslogs_group = awslogs_group
@@ -139,6 +144,9 @@ class ECSOperator(BaseOperator):  # pylint: disable=too-many-instance-attributes
 
         if self.awslogs_region is None:
             self.awslogs_region = region_name
+
+        if self.capacity_provider_strategy is not None:
+            self.launch_type = None
 
         self.hook = None
 
@@ -162,6 +170,8 @@ class ECSOperator(BaseOperator):  # pylint: disable=too-many-instance-attributes
             run_opts['launchType'] = self.launch_type
             if self.launch_type == 'FARGATE':
                 run_opts['platformVersion'] = self.platform_version
+        if self.capacity_provider_strategy:
+            run_opts['capacityProviderStrategy'] = self.capacity_provider_strategy
         if self.group is not None:
             run_opts['group'] = self.group
         if self.placement_constraints is not None:
